@@ -13,5 +13,6 @@ export async function streamChat(sessionId: string, message: string, provider: P
   const response = await fetch(`${apiBase}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message, provider }) });
   if (!response.ok || !response.body) throw new Error(`Chat request failed (${response.status})`);
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
-  while (true) { const { value, done } = await reader.read(); buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done }); const frames = buffer.split("\n\n"); buffer = frames.pop() ?? ""; for (const frame of frames) { const event = frame.match(/^event: (.+)$/m)?.[1]; const raw = frame.match(/^data: (.+)$/m)?.[1]; if (event && raw) onEvent(event, JSON.parse(raw)); } if (done) break; }
+  const processFrames = (flush = false) => { const frames = buffer.split("\n\n"); buffer = flush ? "" : (frames.pop() ?? ""); for (const frame of frames) { const event = frame.match(/^event: (.+)$/m)?.[1]; const raw = frame.match(/^data: (.+)$/m)?.[1]; if (!event || !raw) continue; try { onEvent(event, JSON.parse(raw)); } catch { throw new Error("The backend returned malformed stream data."); } } };
+  while (true) { const { value, done } = await reader.read(); buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done }); processFrames(done); if (done) break; }
 }
