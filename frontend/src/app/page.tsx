@@ -3,19 +3,76 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Artifact, ArtifactViewer, detectArtifact } from "@/components/Artifact/ArtifactViewer";
 import { ModelSelector } from "@/components/Chat/ModelSelector";
-import { createSession, getSession, Message, Provider, Session } from "@/lib/api";
+import { createSession, getSession, Message, Provider, Session, Source } from "@/lib/api";
 import { useChatStream } from "@/hooks/useChatStream";
 
-function SourceList({ sources }: { sources: Array<{ source_id: string; episode: string; guest: string | null; timestamp: string | null; topic: string | null; source_url: string }> }) {
+function SourceList({ sources }: { sources: Source[] }) {
   if (!sources.length) return null;
-  return <ul className="mt-2 space-y-1 text-xs text-slate-400">{sources.map((source) => <li key={source.source_id}><a href={source.source_url} target="_blank" rel="noreferrer" className="text-cyan-300">[{source.source_id}] {source.episode}</a>{source.guest ? ` — ${source.guest}` : ""}{source.timestamp ? ` · ${source.timestamp}` : ""}{source.topic ? ` · ${source.topic}` : ""}</li>)}</ul>;
+  return (
+    <div className="source-stack">
+      <div className="source-heading"><span className="source-rule" /> Evidence used</div>
+      <ul>{sources.map((source) => <li key={source.source_id}>
+        <a href={source.source_url} target="_blank" rel="noreferrer"><span className="source-badge">{source.source_id}</span>{source.episode}</a>
+        {source.guest && <span>{source.guest}</span>}{source.timestamp && <span>{source.timestamp}</span>}
+      </li>)}</ul>
+    </div>
+  );
+}
+
+function MessageCard({ message }: { message: Message }) {
+  const isUser = message.role === "user";
+  return (
+    <article className={`message-card ${isUser ? "message-user" : "message-assistant"}`}>
+      <div className="message-meta"><span className={`role-mark ${isUser ? "role-user" : "role-assistant"}`}>{isUser ? "You" : "Lenny AI"}</span>{!isUser && message.provider && <span className="model-note">{message.provider}</span>}</div>
+      <div className="message-content">{message.content}</div>
+      {!isUser && <SourceList sources={message.source_metadata?.sources ?? []} />}
+    </article>
+  );
+}
+
+function EmptyConversation() {
+  return <div className="empty-conversation"><div className="signal-mark"><span /><span /><span /></div><p className="eyebrow">Grounded research workspace</p><h2>Ask better questions.<br /><em>Find the signal.</em></h2><p className="empty-copy">Explore product, growth, and startup lessons from Lenny&apos;s podcast archive.</p></div>;
 }
 
 export default function Home() {
-  const [session, setSession] = useState<Session | null>(null); const [input, setInput] = useState(""); const [provider, setProvider] = useState<Provider>("ollama"); const [artifactOpen, setArtifactOpen] = useState(true); const [artifact, setArtifact] = useState<Artifact | null>(null); const { streamingText, sources, loading, error, send } = useChatStream();
+  const [session, setSession] = useState<Session | null>(null);
+  const [input, setInput] = useState("");
+  const [provider, setProvider] = useState<Provider>("ollama");
+  const [artifactOpen, setArtifactOpen] = useState(true);
+  const [artifact, setArtifact] = useState<Artifact | null>(null);
+  const { streamingText, sources, loading, error, send } = useChatStream();
+
   const start = () => createSession("New conversation").then(setSession).catch(() => undefined);
   useEffect(() => { start(); }, []);
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (!session || !input.trim() || loading) return; const content = input.trim(); setInput(""); const user: Message = { id: crypto.randomUUID(), role: "user", content, provider: null, model: null, source_metadata: null, created_at: new Date().toISOString() }; setSession({ ...session, messages: [...session.messages, user] }); const response = await send(session.id, content, provider); if (response) { setArtifact(detectArtifact(response.answer)); setSession((current) => current ? { ...current, messages: [...current.messages, { id: crypto.randomUUID(), role: "assistant", content: response.answer, provider: response.retrieval_metadata.provider, model: response.retrieval_metadata.model, source_metadata: { sources: response.sources }, created_at: new Date().toISOString() }] } : current); } };
-  if (!session) return <main className="p-6 text-slate-300">Creating session…</main>;
-  return <main className="grid h-screen grid-cols-1 gap-4 p-4 lg:grid-cols-[1.2fr_0.8fr]"><section className="flex min-h-0 flex-col rounded-xl bg-slate-950 p-4"><header className="mb-3 flex items-center justify-between"><div><button onClick={start} className="rounded bg-slate-800 px-3 py-1 text-xs">New session</button><button onClick={() => getSession(session.id).then(setSession).catch(() => undefined)} className="ml-2 rounded bg-slate-800 px-3 py-1 text-xs">Refresh</button></div><ModelSelector value={provider} onChange={setProvider} /></header><div className="flex-1 space-y-3 overflow-auto">{session.messages.map((message) => <article key={message.id} className="rounded-lg bg-slate-800 p-3"><div className="text-xs uppercase text-slate-400">{message.role}{message.provider ? ` · ${message.provider}` : ""}</div><div className="whitespace-pre-wrap text-sm">{message.content}</div><SourceList sources={message.source_metadata?.sources ?? []} /></article>)}{loading && <article className="rounded-lg bg-slate-800 p-3"><div className="text-xs uppercase text-slate-400">Assistant · streaming</div><div className="whitespace-pre-wrap text-sm">{streamingText || "Retrieving grounded sources…"}</div><SourceList sources={sources} /></article>}</div>{error && <p role="alert" className="mt-2 rounded bg-red-950 p-2 text-sm text-red-200">{error}</p>}<form onSubmit={submit} className="mt-3 flex gap-2"><textarea value={input} onChange={(event) => setInput(event.target.value)} className="min-h-12 flex-1 rounded bg-slate-800 p-3 text-sm" placeholder="Ask about Lenny's podcast archive…"/><button disabled={loading} className="rounded bg-cyan-600 px-4 text-sm disabled:opacity-50">Send</button></form></section><aside className="min-h-0 rounded-xl bg-slate-950 p-4"><button onClick={() => setArtifactOpen((open) => !open)} className="text-sm text-slate-300">{artifactOpen ? "Hide" : "Show"} artifact panel</button>{artifactOpen && <div className="mt-4 h-[calc(100%-3rem)]"><ArtifactViewer artifact={artifact} /></div>}</aside></main>;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || !input.trim() || loading) return;
+    const content = input.trim();
+    setInput("");
+    const user: Message = { id: crypto.randomUUID(), role: "user", content, provider: null, model: null, source_metadata: null, created_at: new Date().toISOString() };
+    setSession({ ...session, messages: [...session.messages, user] });
+    const response = await send(session.id, content, provider);
+    if (response) {
+      setArtifact(detectArtifact(response.answer));
+      setSession((current) => current ? { ...current, messages: [...current.messages, { id: crypto.randomUUID(), role: "assistant", content: response.answer, provider: response.retrieval_metadata.provider, model: response.retrieval_metadata.model, source_metadata: { sources: response.sources }, created_at: new Date().toISOString() }] } : current);
+    }
+  };
+
+  if (!session) return <main className="loading-screen"><div className="loading-orbit" />Preparing your workspace</main>;
+  return (
+    <main className="app-shell">
+      <header className="topbar"><div className="brand-lockup"><div className="brand-icon"><span /><span /><span /></div><div><div className="brand-name">Lenny<span>+</span></div><div className="brand-subtitle">Growth intelligence</div></div></div><div className="topbar-status"><span className="status-dot" /> Archive connected <span className="status-divider" /> <span className="topbar-date">Research mode</span></div></header>
+      <div className="workspace">
+        <section className="chat-panel">
+          <div className="panel-heading"><div><p className="eyebrow">Conversation</p><h1>Ask the archive</h1></div><div className="panel-actions"><button className="quiet-button" onClick={start}><span className="button-symbol">+</span> New</button><button className="icon-button" onClick={() => getSession(session.id).then(setSession).catch(() => undefined)} aria-label="Refresh conversation" title="Refresh conversation">↻</button></div></div>
+          <div className="conversation-scroll">{!session.messages.length && !loading ? <EmptyConversation /> : session.messages.map((message) => <MessageCard key={message.id} message={message} />)}{loading && <article className="message-card message-assistant message-loading"><div className="message-meta"><span className="role-mark role-assistant">Lenny AI</span><span className="model-note">researching</span></div><div className="typing-line"><span /><span /><span /></div>{sources.length > 0 && <SourceList sources={sources} />}{streamingText && <div className="message-content streaming-copy">{streamingText}</div>}</article>}</div>
+          {error && <div className="error-banner" role="alert"><span>!</span>{error}</div>}
+          <form className="composer" onSubmit={submit}><div className="composer-input"><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about product, growth, or strategy..." aria-label="Ask the archive" /><div className="composer-footer"><span>Grounded answers with source evidence</span><span className="shortcut">Enter to send</span></div></div><button className="send-button" disabled={loading || !input.trim()} aria-label="Send question"><span>Send</span><b>↗</b></button></form>
+        </section>
+        <aside className={`artifact-panel ${artifactOpen ? "" : "artifact-collapsed"}`}><div className="artifact-heading"><div><p className="eyebrow">Output</p><h2>Artifact canvas</h2></div><button className="icon-button" onClick={() => setArtifactOpen((open) => !open)} aria-label={artifactOpen ? "Hide artifact canvas" : "Show artifact canvas"} title={artifactOpen ? "Hide artifact canvas" : "Show artifact canvas"}>{artifactOpen ? "−" : "+"}</button></div>{artifactOpen && <div className="artifact-body"><div className="artifact-toolbar"><span className="canvas-dot" /> Live preview <span className="toolbar-divider" /> {artifact ? artifact.type.toUpperCase() : "WAITING"}</div><div className="artifact-content"><ArtifactViewer artifact={artifact} /></div></div>}</aside>
+      </div>
+      <footer className="app-footer"><span>LENNY+ / ARCHIVE WORKSPACE</span><span>Evidence first <span className="footer-dot">·</span> Claims grounded in transcript sources</span></footer>
+    </main>
+  );
 }

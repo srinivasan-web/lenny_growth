@@ -20,7 +20,7 @@ export function detectArtifact(content: string): Artifact | null {
 }
 
 export function ArtifactViewer({ artifact }: { artifact: Artifact | null }) {
-  if (!artifact) return <div className="flex h-full items-center justify-center text-sm text-slate-500">No generated artifact yet.</div>;
+  if (!artifact) return <div className="artifact-empty"><div className="empty-grid"><span /><span /><span /><span /></div><p>Generated outputs will appear here</p><small>Ask a question to create a research artifact.</small></div>;
   if (artifact.type === "html") return <SandboxedIframe html={artifact.content} />;
-  return <div className="prose prose-invert max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.content}</ReactMarkdown></div>;
+  return <div className="artifact-markdown prose prose-invert max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.content}</ReactMarkdown></div>;
 }
