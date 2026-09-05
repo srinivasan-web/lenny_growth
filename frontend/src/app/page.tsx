@@ -37,7 +37,8 @@ function EmptyConversation() {
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [input, setInput] = useState("");
-  const [provider, setProvider] = useState<Provider>("ollama");
+  const configuredProvider = process.env.NEXT_PUBLIC_DEFAULT_PROVIDER;
+  const [provider, setProvider] = useState<Provider>(configuredProvider === "ollama" ? "ollama" : "openai");
   const [artifactOpen, setArtifactOpen] = useState(true);
   const [artifact, setArtifact] = useState<Artifact | null>(null);
   const { streamingText, sources, loading, error, send } = useChatStream();
