@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; } body { margin: 0; background: #0b1020; color: #e5e7eb; font-family: Arial, sans-serif; }
+button, select, textarea { font: inherit; } .prose p { line-height: 1.55; } .prose code { background: #1f2937; padding: 0.1rem 0.25rem; }

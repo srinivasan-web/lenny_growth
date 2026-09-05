@@ -1,0 +1,57 @@
+[
+  {
+    "id": "activation-first-success",
+    "user_question": "How should a product team improve activation for new users?",
+    "expected_topic": "activation",
+    "expected_source": "activation",
+    "expected_answer_characteristics": {
+      "requires_citations": true,
+      "requires_actionable_language": true,
+      "expected_terms": ["activation"]
+    }
+  },
+  {
+    "id": "retention-habit",
+    "user_question": "What helps a product create repeat usage without relying on constant reminders?",
+    "expected_topic": "retention",
+    "expected_source": "retention",
+    "expected_answer_characteristics": {
+      "requires_citations": true,
+      "requires_actionable_language": true,
+      "expected_terms": ["retention"]
+    }
+  },
+  {
+    "id": "growth-experiment",
+    "user_question": "How should a growth team choose and run its next experiment?",
+    "expected_topic": "growth",
+    "expected_source": "growth",
+    "expected_answer_characteristics": {
+      "requires_citations": true,
+      "requires_actionable_language": true,
+      "expected_terms": ["experiment"]
+    }
+  },
+  {
+    "id": "product-market-fit",
+    "user_question": "What signals suggest that a product is moving toward product-market fit?",
+    "expected_topic": "product-market fit",
+    "expected_source": "product-market fit",
+    "expected_answer_characteristics": {
+      "requires_citations": true,
+      "requires_actionable_language": false,
+      "expected_terms": ["product", "fit"]
+    }
+  },
+  {
+    "id": "out-of-domain-weather",
+    "user_question": "What will the weather be tomorrow in Seattle?",
+    "expected_topic": "out-of-domain",
+    "expected_source": null,
+    "expected_answer_characteristics": {
+      "requires_citations": false,
+      "requires_actionable_language": false,
+      "expected_terms": ["sufficient information"]
+    }
+  }
+]
