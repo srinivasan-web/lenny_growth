@@ -9,8 +9,8 @@ export const createSession = (title?: string) => request<Session>("/sessions", {
 export const getSession = (id: string) => request<Session>(`/sessions/${id}`);
 
 export type Provider = "openai" | "cloud" | "ollama";
-export async function streamChat(sessionId: string, message: string, provider: Provider, onEvent: (event: string, data: unknown) => void): Promise<void> {
-  const response = await fetch(`${apiBase}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message, provider }) });
+export async function streamChat(sessionId: string, message: string, provider: Provider, onEvent: (event: string, data: unknown) => void, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(`${apiBase}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message, provider }), signal });
   if (!response.ok || !response.body) throw new Error(`Chat request failed (${response.status})`);
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
   const processFrames = (flush = false) => { const frames = buffer.split("\n\n"); buffer = flush ? "" : (frames.pop() ?? ""); for (const frame of frames) { const event = frame.match(/^event: (.+)$/m)?.[1]; const raw = frame.match(/^data: (.+)$/m)?.[1]; if (!event || !raw) continue; try { onEvent(event, JSON.parse(raw)); } catch { throw new Error("The backend returned malformed stream data."); } } };

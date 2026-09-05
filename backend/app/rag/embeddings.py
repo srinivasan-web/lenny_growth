@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 
 
@@ -26,7 +27,9 @@ class SentenceTransformerEmbedder(Embedder):
         if self._model is None:
             from sentence_transformers import SentenceTransformer
 
+            logging.getLogger(__name__).info("embedding_model_loading", extra={"model": self._model_name})
             self._model = SentenceTransformer(self._model_name)
+            logging.getLogger(__name__).info("embedding_model_loaded", extra={"model": self._model_name, "dimensions": self.dimensions})
         return self._model.encode(texts, normalize_embeddings=True, show_progress_bar=False).tolist()
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
