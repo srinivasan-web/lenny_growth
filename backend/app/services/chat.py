@@ -40,3 +40,7 @@ class ChatService:
             await self._db.rollback()
             logger.warning("chat_generation_failed: %s", error, exc_info=True, extra={"session_id": str(session_id)})
             yield encode_sse("error", {"message": str(error)})
+        except Exception:
+            await self._db.rollback()
+            logger.exception("chat_stream_failed", extra={"session_id": str(session_id)})
+            yield encode_sse("error", {"message": "The backend could not complete the response."})
