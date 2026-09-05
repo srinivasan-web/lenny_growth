@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
 from app.providers.base import BaseLLMProvider, LLMRequest, ProviderError
-from app.rag.retriever import RetrievedChunk
+from app.rag.embeddings import EmbeddingError
+from app.rag.retriever import RetrievedChunk, RetrievalError
 
 INSUFFICIENT_EVIDENCE_MESSAGE = "I do not have sufficient information in Lenny's podcast archive to answer this."
 SOURCE_LABEL_PATTERN = re.compile(r"\[S(?P<index>\d+)\]")
@@ -131,7 +132,10 @@ class GroundedRAGEngine:
         self._settings = settings or get_settings()
 
     async def answer(self, query: str) -> GroundedResponse:
-        chunks = await self._retriever.retrieve(query, top_k=self._settings.retrieval_top_k)
+        try:
+            chunks = await self._retriever.retrieve(query, top_k=self._settings.retrieval_top_k)
+        except (RetrievalError, EmbeddingError) as error:
+            raise RAGError("Grounded retrieval failed.") from error
         context = build_context(chunks)
         top_score = max((chunk.similarity_score for chunk in chunks), default=None)
         base_metadata = {
@@ -165,7 +169,10 @@ class GroundedRAGEngine:
         )
 
     async def stream(self, query: str) -> AsyncIterator[GroundedStreamEvent]:
-        chunks = await self._retriever.retrieve(query, top_k=self._settings.retrieval_top_k)
+        try:
+            chunks = await self._retriever.retrieve(query, top_k=self._settings.retrieval_top_k)
+        except (RetrievalError, EmbeddingError) as error:
+            raise RAGError("Grounded retrieval failed.") from error
         context = build_context(chunks)
         base_metadata = {"retrieved_count": len(chunks), "used_source_count": len(context.sources), "threshold": self._settings.retrieval_similarity_threshold, "top_similarity_score": max((chunk.similarity_score for chunk in chunks), default=None)}
         if not context.sources:

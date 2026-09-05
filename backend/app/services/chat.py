@@ -38,5 +38,5 @@ class ChatService:
                 yield encode_sse(item.event, item.data)
         except RAGError as error:
             await self._db.rollback()
-            logger.warning("chat_generation_failed", extra={"session_id": str(session_id)})
-            yield encode_sse("error", {"message": "Grounded answer generation failed."})
+            logger.warning("chat_generation_failed: %s", error, exc_info=True, extra={"session_id": str(session_id)})
+            yield encode_sse("error", {"message": str(error)})
