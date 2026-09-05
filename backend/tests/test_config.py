@@ -11,3 +11,9 @@ def test_postgres_url_with_async_driver_is_unchanged() -> None:
     url = "postgresql+asyncpg://user:password@host/database"
 
     assert Settings(database_url=url).database_url == url
+
+
+def test_cors_origins_normalize_trailing_slashes() -> None:
+    settings = Settings(database_url="postgresql+asyncpg://u:p@h/db", cors_origins="https://example.vercel.app/")
+
+    assert settings.cors_origin_list == ["https://example.vercel.app"]
