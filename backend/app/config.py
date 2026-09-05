@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +28,17 @@ class Settings(BaseSettings):
     rag_temperature: float = 0.2
     rag_max_output_tokens: int = 1200
     ship30_max_output_tokens: int = 2400
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def use_async_postgres_driver(cls, value: str) -> str:
+        """Render supplies postgres URLs without the asyncpg driver suffix."""
+        if isinstance(value, str):
+            if value.startswith("postgres://"):
+                return "postgresql+asyncpg://" + value[len("postgres://"):]
+            if value.startswith("postgresql://"):
+                return "postgresql+asyncpg://" + value[len("postgresql://"):]
+        return value
 
     @property
     def cors_origin_list(self) -> list[str]:
